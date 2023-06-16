@@ -8,15 +8,8 @@
 #include <linux/cdev.h>
 #include <linux/gpio.h>
 #include <linux/uaccess.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <bcm2835.h>
 
-#define EchoPin RPI_V2_GPIO_P1_18
+#define EchoPin 18
 #define FILE_PATH "/dev/gpio_read"
 
 static dev_t first;
@@ -24,16 +17,28 @@ static struct cdev c_dev;
 static struct class *cl;
 const int v_sonido = 34300;
 
+static void set_gpio_input(unsigned int gpio)
+{
+    unsigned int reg = gpio / 10;
+    unsigned int shift = (gpio % 10) * 3;
+
+    unsigned int* addr = ioremap(0x3F200000 + reg, 4);
+    unsigned int value = ioread32(addr);
+    value &= ~(7 << shift);
+    iowrite32(value, addr);
+    iounmap(addr);
+}
+
 static int read_sensor_data(void)
 {
     struct timeval inicio_pulso, fin_pulso;
 
-    while (bcm2835_gpio_lev(EchoPin) == 0)
+    while (gpio_get_value(EchoPin) == 0)
     {
         gettimeofday(&inicio_pulso, NULL);
     }
 
-    while (bcm2835_gpio_lev(EchoPin) == 1)
+    while (gpio_get_value(EchoPin) == 1)
     {
         gettimeofday(&fin_pulso, NULL);
     }
@@ -100,12 +105,13 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len, loff
 }
 
 static struct file_operations pugs_fops =
-    {
-        .owner = THIS_MODULE,
-        .open = my_open,
-        .release = my_close,
-        .read = my_read,
-        .write = my_write};
+{
+    .owner = THIS_MODULE,
+    .open = my_open,
+    .release = my_close,
+    .read = my_read,
+    .write = my_write
+};
 
 static int __init cdd_init(void)
 {
@@ -142,13 +148,9 @@ static int __init cdd_init(void)
     }
     printk(KERN_INFO "<Major, Minor>: <%d, %d>\n", MAJOR(first), MINOR(first));
 
-    if (!bcm2835_init())
-    {
-        printk(KERN_ALERT "Error al inicializar bcm2835\n");
-        return 1;
-    }
+    // Configurar pin GPIO como entrada
+    set_gpio_input(EchoPin);
 
-    bcm2835_gpio_fsel(EchoPin, BCM2835_GPIO_FSEL_INPT);
     printk(KERN_INFO "Medición de la distancia en curso\n");
 
     return 0;
@@ -156,7 +158,6 @@ static int __init cdd_init(void)
 
 static void __exit cdd_exit(void)
 {
-    bcm2835_close();
     cdev_del(&c_dev);
     device_destroy(cl, first);
     class_destroy(cl);
