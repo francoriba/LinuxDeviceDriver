@@ -8,12 +8,15 @@
 #include <linux/cdev.h>
 #include <linux/gpio.h>
 #include <linux/uaccess.h>
-#include <wiringPi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <bcm2835.h>
 
-#define EchoPin 24
+#define EchoPin RPI_V2_GPIO_P1_18
 #define FILE_PATH "/dev/gpio_read"
 
 static dev_t first;
@@ -25,12 +28,12 @@ static int read_sensor_data(void)
 {
     struct timeval inicio_pulso, fin_pulso;
 
-    while (digitalRead(EchoPin) == 0)
+    while (bcm2835_gpio_lev(EchoPin) == 0)
     {
         gettimeofday(&inicio_pulso, NULL);
     }
 
-    while (digitalRead(EchoPin) == 1)
+    while (bcm2835_gpio_lev(EchoPin) == 1)
     {
         gettimeofday(&fin_pulso, NULL);
     }
@@ -41,20 +44,16 @@ static int read_sensor_data(void)
     char buffer[50];
     int len = snprintf(buffer, sizeof(buffer), "Distancia: %.2f cm\n", distancia);
 
-    struct file *file = filp_open(FILE_PATH, O_WRONLY | O_CREAT | O_APPEND, 0644);
-    if (IS_ERR(file))
+    int file = open(FILE_PATH, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (file < 0)
     {
         printk(KERN_ALERT "Error al abrir el archivo\n");
-        return PTR_ERR(file);
+        return -1;
     }
 
-    mm_segment_t old_fs = get_fs();
-    set_fs(KERNEL_DS);
+    ssize_t written = write(file, buffer, len);
 
-    ssize_t written = kernel_write(file, buffer, len, &file->f_pos);
-
-    set_fs(old_fs);
-    filp_close(file, NULL);
+    close(file);
 
     return written;
 }
@@ -143,13 +142,13 @@ static int __init cdd_init(void)
     }
     printk(KERN_INFO "<Major, Minor>: <%d, %d>\n", MAJOR(first), MINOR(first));
 
-    if (wiringPiSetup() == -1)
+    if (!bcm2835_init())
     {
-        printk(KERN_ALERT "Error al inicializar wiringPi\n");
+        printk(KERN_ALERT "Error al inicializar bcm2835\n");
         return 1;
     }
 
-    pinMode(EchoPin, INPUT);
+    bcm2835_gpio_fsel(EchoPin, BCM2835_GPIO_FSEL_INPT);
     printk(KERN_INFO "Medición de la distancia en curso\n");
 
     return 0;
@@ -157,6 +156,7 @@ static int __init cdd_init(void)
 
 static void __exit cdd_exit(void)
 {
+    bcm2835_close();
     cdev_del(&c_dev);
     device_destroy(cl, first);
     class_destroy(cl);
