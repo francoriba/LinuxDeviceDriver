@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "kdev_t.h": "c",
+        "gpio.h": "c",
+        "type_traits": "c"
+    }
+}
