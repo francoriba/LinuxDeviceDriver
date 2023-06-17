@@ -15,7 +15,7 @@ static struct class *cl;  // Global variable for the device class
 
 static char message[BUFFER_SIZE] = {0};
 static short message_size;
-static int gpio_pin = 18;  // Ejemplo: GPIO 18
+static int gpio_pin = 24;  // Ejemplo: GPIO 18
 
 // Función de apertura del dispositivo
 static int device_open(struct inode *inode, struct file *file)
@@ -36,9 +36,12 @@ static ssize_t device_read(struct file *file, char *buffer, size_t length, loff_
     int gpio_value;
     char gpio_value_str[2];
 
+    memset(message, 0, sizeof(message));  // Limpieza del búfer message
+
     gpio_value = gpio_get_value(gpio_pin);
     sprintf(gpio_value_str, "%d", gpio_value);
     strcat(message, gpio_value_str);
+    strcat(message, "\n");
 
     message_size = strlen(message);
 
@@ -56,6 +59,7 @@ static ssize_t device_read(struct file *file, char *buffer, size_t length, loff_
     return length;
 }
 
+
 // Función de escritura en el dispositivo
 static ssize_t device_write(struct file *file, const char *buffer, size_t length, loff_t *offset){
     char command[BUFFER_SIZE];
@@ -70,10 +74,10 @@ static ssize_t device_write(struct file *file, const char *buffer, size_t length
         } else if (strncmp(command, "in", 2) == 0) {
             gpio_direction_input(gpio_pin);  // Configurar como entrada
             printk(KERN_INFO "GPIO %d configurado como entrada.\n", gpio_pin);
-        } else if (command[0] == '0') {
+        } else if (strncmp(command, "0", 1) == 0) {
             gpio_set_value(gpio_pin, 0);
             printk(KERN_INFO "GPIO %d establecido en bajo.\n", gpio_pin);
-        } else if (command[0] == '1') {
+        } else if (strncmp(command, "1", 1) == 0) {
             gpio_set_value(gpio_pin, 1);
             printk(KERN_INFO "GPIO %d establecido en alto.\n", gpio_pin);
         } else {
