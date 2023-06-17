@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 # Configuración de pines GPIO
 pin_trigger = 23
 pin_echo = 24
+file_path = "/dev/gpio_device"
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(pin_trigger, GPIO.OUT)
@@ -58,12 +59,12 @@ try:
     while True:
         distancia = medir_distancia()
         print("Distancia:", distancia, "cm")
-        tiempo.append(time.time())
-        distancias.append(distancia)
-        time.sleep(0.1)
+     #   tiempo.append(time.time())
+      #  distancias.append(distancia)
+        time.sleep(1)
         
         # Graficar distancia en función del tiempo en tiempo real
-        graficar_distancia_tiempo(tiempo, distancias)
+       # graficar_distancia_tiempo(tiempo, distancias)
 
 except KeyboardInterrupt:
     print("Programa terminado por el usuario")

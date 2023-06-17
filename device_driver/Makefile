@@ -10,4 +10,4 @@ clean:
 	make -C $(KDIR) M=$(PWD) clean
 
 # Remember to change device file permissions after insterting the module
-# "sudo chmod 666 /dev/mydevice"
+# "sudo chmod 666 /dev/gpio_device"
