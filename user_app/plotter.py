@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # Configuración de pines GPIO
 pin_trigger_s1 = 23 #echo24
-pin_trigger_s2 = 27 #echo22
+pin_trigger_s2 = 13 #echo16
 pin_pulsador = 12
 
 
@@ -63,6 +63,10 @@ def medir_distancia():
     GPIO.output(pin_trigger_s1, GPIO.HIGH)
     time.sleep(0.00001)
     GPIO.output(pin_trigger_s1, GPIO.LOW)
+
+    GPIO.output(pin_trigger_s2, GPIO.HIGH)
+    time.sleep(0.00001)
+    GPIO.output(pin_trigger_s2, GPIO.LOW)
     
     # Esperar a que el pin de echo se active
     while pin_echo_value == 0:
@@ -104,10 +108,20 @@ try:
             if flag == 1: # si el pin pasa de 1 a 0
                  flag = 0
                  enviar_comando("toggle")
+                 if (pin_trigger_s1 == 23):
+                    pin_trigger_s1 = 13
+                    pin_trigger_s2 = 23
+                 else:
+                    pin_trigger_s1 = 23
+                    pin_trigger_s2 = 13
+                 resetear_grafico()
+
         else:
              if flag == 0: # si el pin pasa de 0 a 1
                 flag = 1
                 enviar_comando("toggle")
+                resetear_grafico()
+
 
         distancia = medir_distancia()
         tiempo_actual = time.time()
