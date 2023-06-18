@@ -3,43 +3,77 @@ import time
 import matplotlib.pyplot as plt
 
 # Configuración de pines GPIO
-pin_trigger = 23
+pin_trigger_s1 = 23 #echo24
+pin_trigger_s2 = 27 #echo22
+pin_pulsador = 12
 
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(pin_trigger, GPIO.OUT)
+GPIO.setup(pin_trigger_s1, GPIO.OUT)
+GPIO.setup(pin_trigger_s2, GPIO.OUT)
+GPIO.setup(pin_pulsador, GPIO.IN)
+#GPIO.setwarnings(False)  # Deshabilitar las advertencias de GPIO
 
 # CDF de lectura
-file_path = "/dev/gpio_device"  
+file_path = "/dev/gpio_device"
 
-texto1 = "in" #comando que hay que escribir en el archivo para que el driver configure como entrada el pin echo
-try:
-    with open(file_path, "w") as archivo:
-        archivo.write(texto1)
-    print("Escritura exitosa")
-except IOError:
-    print("No se pudo escribir en el archivo")
+# Listas para almacenar los valores de tiempo y distancia
+tiempos = []
+distancias = []
+
+def enviar_comando(comando):
+    try:
+        with open(file_path, "w") as archivo:
+            archivo.write(comando)
+        print("Escritura exitosa:", comando)
+    except IOError:
+        print("No se pudo escribir en el archivo")
+
+def decodificar_lectura(valor_leido):
+    if len(valor_leido) > 1: #es un comando
+        return None
+    else:      # Es un valor de pin
+        return int(valor_leido)
+
+def resetear_grafico():
+    plt.clf()  # Borrar el contenido del gráfico
+    tiempos.clear()
+    distancias.clear()
+    plt.xlabel('Tiempo (sec)')
+    plt.ylabel('Distancia (cm)')
+    plt.title('Mediciones de distancia con sensor ultrasónico')
+    plt.grid(True)  # Agregar grid al gráfico
+
+def pulsador_presionado(channel):
+        print("Pulsador presionado")
 
 def medir_distancia():
     # Leer el valor del pin echo desde el archivo
     with open(file_path, "r") as archivo:
-        pin_echo_value = int(archivo.read())
+        valor_leido = archivo.read().strip()
+
+    pin_echo_value = decodificar_lectura(valor_leido)
+
+    if pin_echo_value is None:
+        pin_echo_value = 1 #ver
+        return None
     
-    # Generar pulso de trigger
-    GPIO.output(pin_trigger, GPIO.HIGH)
+    # Generar pulso de trigger para el sensor 1
+    GPIO.output(pin_trigger_s1, GPIO.HIGH)
     time.sleep(0.00001)
-    GPIO.output(pin_trigger, GPIO.LOW)
+    GPIO.output(pin_trigger_s1, GPIO.LOW)
     
     # Esperar a que el pin de echo se active
     while pin_echo_value == 0:
         with open(file_path, "r") as archivo:
-            pin_echo_value = int(archivo.read())
-    
+            valor_leido = archivo.read().strip()
+        pin_echo_value = decodificar_lectura(valor_leido)
     inicio_pulso = time.time()
     
     # Esperar a que el pin de echo se desactive
     while pin_echo_value == 1:
         with open(file_path, "r") as archivo:
-            pin_echo_value = int(archivo.read())
+            valor_leido = archivo.read().strip()
+        pin_echo_value = decodificar_lectura(valor_leido)
     
     fin_pulso = time.time()
     
@@ -54,9 +88,8 @@ def medir_distancia():
     
     return distancia
 
-# Listas para almacenar los valores de tiempo y distancia
-tiempos = []
-distancias = []
+#GPIO.add_event_detect(pin_pulsador, GPIO.RISING, callback = pulsador_presionado)
+enviar_comando("in")
 
 try:
     while True:
@@ -71,13 +104,13 @@ try:
         
         # Actualizar el gráfico
         plt.plot(tiempos, distancias)
-        plt.xlabel('Tiempo')
+        plt.xlabel('Tiempo(sec)')
         plt.ylabel('Distancia (cm)')
         plt.title('Mediciones de distancia con sensor ultrasónico')
         plt.grid(True)  # Agregar grid al gráfico
         plt.pause(1)
-        
         time.sleep(1)
+
 except KeyboardInterrupt:
     print("Programa terminado por el usuario")
 finally:

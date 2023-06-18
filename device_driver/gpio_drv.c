@@ -15,7 +15,8 @@ static struct class *cl;  // Global variable for the device class
 
 static char message[BUFFER_SIZE] = {0};
 static short message_size;
-static int gpio_pin = 24;  // Ejemplo: GPIO 18
+static int gpio_pin = 24;  // echo 23
+static int gpio_pin2 = 13;  // echo 15 
 
 // Función de apertura del dispositivo
 static int device_open(struct inode *inode, struct file *file)
@@ -74,6 +75,15 @@ static ssize_t device_write(struct file *file, const char *buffer, size_t length
         } else if (strncmp(command, "in", 2) == 0) {
             gpio_direction_input(gpio_pin);  // Configurar como entrada
             printk(KERN_INFO "GPIO %d configurado como entrada.\n", gpio_pin);
+        }else if (strncmp(command, "in2", 2) == 0) {
+            gpio_direction_input(gpio_pin2);  // Configurar como entrada
+            printk(KERN_INFO "GPIO %d configurado como entrada.\n", gpio_pin2);
+        }  else if (strncmp(command, "toggle", 6) == 0) {
+            printk(KERN_INFO "toggleado \n");
+
+
+
+            
         } else if (strncmp(command, "0", 1) == 0) {
             gpio_set_value(gpio_pin, 0);
             printk(KERN_INFO "GPIO %d establecido en bajo.\n", gpio_pin);
@@ -145,7 +155,6 @@ static int __init gpio_device_init(void)
 
 // Función de limpieza del módulo
 static void __exit gpio_device_exit(void){
-
     cdev_del(&c_dev);
     device_destroy(cl, first);
     class_destroy(cl);
