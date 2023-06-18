@@ -1,1 +1,0 @@
-cmd_/home/franco/LinuxPiDriverDev/device_driver/gpio_drv.mod := printf '%s\n'   gpio_drv.o | awk '!x[$$0]++ { print("/home/franco/LinuxPiDriverDev/device_driver/"$$0) }' > /home/franco/LinuxPiDriverDev/device_driver/gpio_drv.mod
