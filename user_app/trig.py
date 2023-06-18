@@ -4,28 +4,42 @@ import matplotlib.pyplot as plt
 
 # Configuración de pines GPIO
 pin_trigger = 23
-pin_echo = 24
-file_path = "/dev/gpio_device"
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(pin_trigger, GPIO.OUT)
-GPIO.setup(pin_echo, GPIO.IN)
+
+# CDF de lectura
+file_path = "/dev/gpio_device"  
+
+texto1 = "in" #comando que hay que escribir en el archivo para que el driver configure como entrada el pin echo
+try:
+    with open(file_path, "w") as archivo:
+        archivo.write(texto1)
+    print("Escritura exitosa")
+except IOError:
+    print("No se pudo escribir en el archivo")
 
 def medir_distancia():
+    # Leer el valor del pin echo desde el archivo
+    with open(file_path, "r") as archivo:
+        pin_echo_value = int(archivo.read())
+    
     # Generar pulso de trigger
     GPIO.output(pin_trigger, GPIO.HIGH)
     time.sleep(0.00001)
     GPIO.output(pin_trigger, GPIO.LOW)
     
     # Esperar a que el pin de echo se active
-    while GPIO.input(pin_echo) == 0:
-        pass
+    while pin_echo_value == 0:
+        with open(file_path, "r") as archivo:
+            pin_echo_value = int(archivo.read())
     
     inicio_pulso = time.time()
     
     # Esperar a que el pin de echo se desactive
-    while GPIO.input(pin_echo) == 1:
-        pass
+    while pin_echo_value == 1:
+        with open(file_path, "r") as archivo:
+            pin_echo_value = int(archivo.read())
     
     fin_pulso = time.time()
     
@@ -40,36 +54,34 @@ def medir_distancia():
     
     return distancia
 
-def graficar_distancia_tiempo(tiempo, distancias):
-    plt.plot(tiempo, distancias)
-    plt.xlabel('Tiempo (s)')
-    plt.ylabel('Distancia (cm)')
-    plt.title('Gráfico de distancia en función del tiempo')
-    plt.draw()
-    plt.pause(0.001)
-    plt.clf()
+# Listas para almacenar los valores de tiempo y distancia
+tiempos = []
+distancias = []
 
 try:
-    tiempo = []
-    distancias = []
-    
-    plt.ion()
-    fig = plt.figure()
-    
     while True:
         distancia = medir_distancia()
-        print("Distancia:", distancia, "cm")
-     #   tiempo.append(time.time())
-      #  distancias.append(distancia)
-        time.sleep(1)
+        tiempo_actual = time.time()
         
-        # Graficar distancia en función del tiempo en tiempo real
-       # graficar_distancia_tiempo(tiempo, distancias)
-
+        print("Distancia:", distancia, "cm")
+        
+        # Agregar los valores actuales a las listas
+        tiempos.append(tiempo_actual)
+        distancias.append(distancia)
+        
+        # Actualizar el gráfico
+        plt.plot(tiempos, distancias)
+        plt.xlabel('Tiempo')
+        plt.ylabel('Distancia (cm)')
+        plt.title('Mediciones de distancia con sensor ultrasónico')
+        plt.grid(True)  # Agregar grid al gráfico
+        plt.pause(1)
+        
+        time.sleep(1)
 except KeyboardInterrupt:
     print("Programa terminado por el usuario")
-
 finally:
-    plt.ioff()
-    plt.close(fig)
     GPIO.cleanup()
+
+# Mostrar el gráfico final
+plt.show()
